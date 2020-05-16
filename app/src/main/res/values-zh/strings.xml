@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">相机信息查询</string>
+    <string name="camera_check">查看相机</string>
+    <string name="camera_dump_about">查看设备支持的metadata key</string>
+    <string name="rear_main_camera">后置主摄</string>
+    <string name="rear_second_camera">后置辅摄</string>
+    <string name="rear_third_camera">后置第三颗</string>
+    <string name="rear_fourth_camera">后置第四颗</string>
+    <string name="front_main_camera">前置主摄</string>
+    <string name="front_sub_camera">前置辅摄</string>
+    <string name="rear_camera">后置镜头</string>
+    <string name="front_camera">前置镜头</string>
+    <string name="mulit_logic_camera">多摄逻辑 id</string>
+    <string name="single_physical_id">独立物理 id</string>
+    <string name="cd_shutter">相机快门</string>
+    <string name="cd_camera_switch">切换相机</string>
+    <string name="camera_api2_check">camera2 API 兼容性检查</string>
+    <string name="camera_X_check">cameraX API 兼容性检查</string>
+    <string name="camera_api2_about">查看API方法结果</string>
+    <string name="camera_X_about">查看CameraX方法结果</string>
+</resources>

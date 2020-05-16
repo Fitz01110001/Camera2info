@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Camera2Info</string>
+    <string name="camera_check">check camera</string>
+    <string name="camera_dump"
+            translatable="false">dump media.camera</string>
+    <string name="camera_dump_about">view supported metadata</string>
+    <string name="rear_main_camera">rear main camera</string>
+    <string name="rear_second_camera">rear second camera</string>
+    <string name="rear_third_camera">rear third camera</string>
+    <string name="rear_fourth_camera">rear fourth camera</string>
+    <string name="front_main_camera">front main camera</string>
+    <string name="front_sub_camera">front sub camera</string>
+    <string name="rear_camera">rear camera</string>
+    <string name="front_camera">front camera</string>
+    <string name="mulit_logic_camera">mulit logical id</string>
+    <string name="single_physical_id">single pyhsical id</string>
+    <string name="cd_shutter">camera shutter</string>
+    <string name="cd_camera_switch">switch camera</string>
+    <string name="camera_api2_check">check camera2 api</string>
+    <string name="camera_X_check">check cameraX api</string>
+    <string name="camera_api2_about">View api2 resluts</string>
+    <string name="camera_X_about">view cameraX results</string>
+</resources>
