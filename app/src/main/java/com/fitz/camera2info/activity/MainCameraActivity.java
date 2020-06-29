@@ -12,7 +12,8 @@ import androidx.annotation.Nullable;
 
 import com.fitz.camera2info.CameraLog;
 import com.fitz.camera2info.R;
-import com.fitz.camera2info.base.BaseActivity;
+import com.fitz.camera2info.base.BaseCameraActivity;
+import com.fitz.camera2info.mode.ModeManager;
 import com.fitz.camera2info.utils.Util;
 import com.qmuiteam.qmui.util.QMUIDisplayHelper;
 import com.qmuiteam.qmui.util.QMUIResHelper;
@@ -31,7 +32,7 @@ import butterknife.ButterKnife;
  * @Author: Fitz
  * @CreateDate: 2019/12/15 20:54
  */
-public class MainActivity extends BaseActivity {
+public class MainCameraActivity extends BaseCameraActivity {
     private static final String TAG = "MainActivity";
     @BindView(R.id.topbar) QMUITopBarLayout topbar;
     @BindView(R.id.camera_test_list) QMUIGroupListView mGroupListView;
@@ -103,7 +104,7 @@ public class MainActivity extends BaseActivity {
                             CameraLog.d(getTAG(), "check");
 
                             Intent intent = new Intent();
-                            intent.setClass(getContext(), CameraTestActivity.class);
+                            intent.setClass(getContext(), CameraTestCameraActivity.class);
                             startActivity(intent);
 
                             return;
@@ -111,14 +112,18 @@ public class MainActivity extends BaseActivity {
                             CameraLog.d(getTAG(), "dump");
 
                             Intent intent = new Intent();
-                            intent.setClass(getContext(), CameraDumpActivity.class);
+                            intent.setClass(getContext(), CameraDumpCameraActivity.class);
                             startActivity(intent);
 
                             return;
                         } else if (text.equals(getString(R.string.camera_api2_check))) {
                             CameraLog.d(getTAG(), "check api2");
 
+                            Intent intent = new Intent();
+                            intent.setClass(getContext(), CameraAPI2CameraActivity.class);
+                            startActivity(intent);
 
+                            return;
                         } else if (text.equals(getString(R.string.camera_X_check))) {
                             CameraLog.d(getTAG(), "check apiX");
 
@@ -170,11 +175,6 @@ public class MainActivity extends BaseActivity {
         return TAG;
     }
 
-    @Override
-    protected void setUIEnable(Boolean enable) {
-
-    }
-
     private Context getContext() {
 
         return (Context) this;
@@ -185,4 +185,13 @@ public class MainActivity extends BaseActivity {
         return (Activity) this;
     }
 
+    @Override
+    public void setUIEnable(Boolean enable) {
+
+    }
+
+    @Override
+    public void setUICurrentMode(ModeManager.ModeName modeName) {
+
+    }
 }

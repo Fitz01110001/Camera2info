@@ -3,6 +3,7 @@
           package="com.fitz.camera2info">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
@@ -16,7 +17,7 @@
         android:theme="@style/QMUI.Compat.NoActionBar">
 
         <activity
-            android:name=".activity.MainActivity"
+            android:name=".activity.MainCameraActivity"
             android:theme="@style/AppTheme">
 
             <intent-filter>
@@ -27,11 +28,11 @@
         </activity>
 
         <activity
-            android:name=".activity.CameraTestActivity"
+            android:name=".activity.CameraTestCameraActivity"
             android:theme="@style/AppTheme"></activity>
 
         <activity
-            android:name=".activity.CameraDumpActivity"
+            android:name=".activity.CameraDumpCameraActivity"
             android:theme="@style/AppTheme"></activity>
 
         <activity

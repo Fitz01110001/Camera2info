@@ -3,11 +3,9 @@ package com.fitz.camera2info.storage;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.media.Image;
 import android.net.Uri;
-import android.os.Environment;
 import android.provider.MediaStore;
 
 import com.fitz.camera2info.CameraLog;
@@ -16,7 +14,6 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -32,36 +29,55 @@ import static android.os.Environment.DIRECTORY_DCIM;
  * @Author: Fitz
  * @CreateDate: 2019/12/22 15:34
  */
-public class SaveImage implements Runnable {
+public class StorageRunnable implements Runnable {
     private static String TAG = "SaveImage";
 
     private Image mImage = null;
     private String mImageName = "";
+    private String mVideoName = "";
+    private String mVideoPath = "";
     private Bitmap mBitmap = null;
     private Context mContext = null;
     private static File imageDir = null;
     private File finalImage = null;
-    private onSaveImageState mOnSaveImageState = null;
+    private onSaveState mOnSaveState = null;
+    private saveType defaultSaveType = saveType.picture;
+
+    private enum saveType {
+        picture,
+        video
+    }
 
 
-    public SaveImage(onSaveImageState onSaveImageState, Image image, String imageName) {
+    public StorageRunnable(onSaveState onSaveState, Image image, String imageName) {
 
         CameraLog.d(TAG, "SaveImage: " + imageName);
-        mOnSaveImageState = onSaveImageState;
+        defaultSaveType = saveType.picture;
+        mOnSaveState = onSaveState;
         mImage = image;
         mImageName = imageName;
-        mContext = mOnSaveImageState.getContext();
+        mContext = mOnSaveState.getContext();
         imageDir = mContext.getExternalFilesDir(DIRECTORY_DCIM);
     }
 
-    public SaveImage(onSaveImageState onSaveImageState, Bitmap bitmap, String imageName) {
+    public StorageRunnable(onSaveState onSaveState, Bitmap bitmap, String imageName) {
 
         CameraLog.d(TAG, "SaveBitmap: " + imageName);
-        mOnSaveImageState = onSaveImageState;
+        mOnSaveState = onSaveState;
         mBitmap = bitmap;
         mImageName = imageName;
-        mContext = mOnSaveImageState.getContext();
+        mContext = mOnSaveState.getContext();
         imageDir = mContext.getExternalFilesDir(DIRECTORY_DCIM);
+    }
+
+    public StorageRunnable(onSaveState onSaveState, String path, String videoName) {
+
+        CameraLog.d(TAG, "mVideoPath: " + path);
+        defaultSaveType = saveType.video;
+        mOnSaveState = onSaveState;
+        mVideoPath = path;
+        mVideoName = videoName;
+        mContext = mOnSaveState.getContext();
     }
 
     /**
@@ -103,7 +119,7 @@ public class SaveImage implements Runnable {
     @Override
     public void run() {
 
-        if (mImage != null) {
+        if (defaultSaveType == saveType.picture) {
             ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);
@@ -125,7 +141,7 @@ public class SaveImage implements Runnable {
                 } catch (IOException e) {
                     CameraLog.e(TAG, "save IOException: " + e.toString());
 
-                    mOnSaveImageState.onImageSaved(false, null);
+                    mOnSaveState.onImageSaved(false, null);
                     return;
                 } finally {
                     buffer.rewind();
@@ -145,10 +161,12 @@ public class SaveImage implements Runnable {
             } catch (IOException e) {
                 CameraLog.e(TAG, "save IOException: " + e.toString());
 
-                mOnSaveImageState.onImageSaved(false, null);
+                mOnSaveState.onImageSaved(false, null);
             } finally {
                 mImage.close();
             }
+        } else if (defaultSaveType == saveType.video) {
+            saveVideoIntoAlbum(mVideoPath);
         }
     }
 
@@ -179,7 +197,7 @@ public class SaveImage implements Runnable {
         values.put(MediaStore.Images.Media.DESCRIPTION, "This is an FitzCamera image");
         values.put(MediaStore.Images.Media.DISPLAY_NAME, mImageName);
         values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-        values.put(MediaStore.Images.Media.TITLE, "Image.jpg");
+        values.put(MediaStore.Images.Media.TITLE, mImageName);
         values.put(MediaStore.Images.Media.BUCKET_DISPLAY_NAME, "FitzCamera");
         values.put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/Camera");
 
@@ -206,20 +224,41 @@ public class SaveImage implements Runnable {
                 os.flush();
             }
 
-            mOnSaveImageState.onImageSaved(true, insertUri);
+            mOnSaveState.onImageSaved(true, insertUri);
 
         } catch (IOException e) {
             CameraLog.e(TAG, "savePicIntoAlbum IOException: " + e.toString());
 
-            mOnSaveImageState.onImageSaved(false, null);
+            mOnSaveState.onImageSaved(false, null);
         }
 
         CameraLog.d(TAG, "savePicIntoAlbum X");
     }
 
-    public interface onSaveImageState {
+    private void saveVideoIntoAlbum(String path) {
+
+        CameraLog.d(TAG, "saveVideoIntoAlbum, path: " + path);
+
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.Video.Media.DESCRIPTION, "This is an FitzCamera video");
+        values.put(MediaStore.Video.Media.DATE_ADDED, System.currentTimeMillis());
+        values.put(MediaStore.Video.Media.DISPLAY_NAME, mVideoName);
+        values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4");
+        values.put(MediaStore.Video.Media.TITLE, mVideoName);
+        values.put(MediaStore.Video.Media.BUCKET_DISPLAY_NAME, "FitzCamera");
+        values.put(MediaStore.Video.Media.RELATIVE_PATH, "DCIM/Camera");
+
+        ContentResolver resolver = mContext.getContentResolver();
+        Uri insertUri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values);
+        CameraLog.d(TAG, "saveVideoIntoAlbum, path: " + insertUri);
+        mOnSaveState.onVideoSaved(insertUri);
+    }
+
+    public interface onSaveState {
         Context getContext();
 
         void onImageSaved(boolean success, Uri uri);
+
+        void onVideoSaved(Uri uri);
     }
 }

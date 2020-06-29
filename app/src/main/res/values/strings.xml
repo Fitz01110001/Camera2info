@@ -20,4 +20,6 @@
     <string name="camera_X_check">check cameraX api</string>
     <string name="camera_api2_about">View api2 resluts</string>
     <string name="camera_X_about">view cameraX results</string>
+    <string name="mode_photo">photo</string>
+    <string name="mode_video">video</string>
 </resources>

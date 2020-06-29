@@ -8,9 +8,10 @@ import android.view.ViewGroup;
 
 import com.fitz.camera2info.CameraLog;
 import com.fitz.camera2info.R;
-import com.fitz.camera2info.base.BaseActivity;
+import com.fitz.camera2info.base.BaseCameraActivity;
 import com.fitz.camera2info.camerainfo.CameraItem;
 import com.fitz.camera2info.manualtest.CameraManualTest;
+import com.fitz.camera2info.mode.ModeManager;
 import com.fitz.camera2info.utils.Util;
 import com.qmuiteam.qmui.util.QMUIDisplayHelper;
 import com.qmuiteam.qmui.widget.QMUITopBarLayout;
@@ -30,7 +31,7 @@ import butterknife.ButterKnife;
  * @Author: Fitz
  * @CreateDate: 2019/12/15 23:31
  */
-public class CameraTestActivity extends BaseActivity {
+public class CameraTestCameraActivity extends BaseCameraActivity {
 
     @BindView(R.id.topbar_test) QMUITopBarLayout topbar;
     @BindView(R.id.camera_test_list) QMUIGroupListView cameraTestList;
@@ -101,7 +102,12 @@ public class CameraTestActivity extends BaseActivity {
     }
 
     @Override
-    protected void setUIEnable(Boolean enable) {
+    public void setUIEnable(Boolean enable) {
+
+    }
+
+    @Override
+    public void setUICurrentMode(ModeManager.ModeName modeName) {
 
     }
 

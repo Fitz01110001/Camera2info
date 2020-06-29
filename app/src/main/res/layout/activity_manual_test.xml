@@ -14,19 +14,46 @@
         android:id="@+id/preview_root"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:background="@android:color/black"
         app:layout_constraintBottom_toBottomOf="@+id/camera_control"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/top_bar" >
+        app:layout_constraintTop_toBottomOf="@+id/top_bar">
 
     </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/linearLayout2"
+        android:layout_width="0dp"
+        android:layout_height="20dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@+id/camera_control"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/tv_photo_mode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/mode_photo" />
+
+        <TextView
+            android:id="@+id/tv_video_mode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/mode_video" />
+    </LinearLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/camera_control"
         android:layout_width="match_parent"
         android:layout_height="150dp"
         android:alpha="80"
-        android:background="@color/qmui_config_color_pure_black"
+        android:background="@color/qmui_config_color_50_pure_black"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 

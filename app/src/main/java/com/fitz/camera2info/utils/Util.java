@@ -209,7 +209,7 @@ public class Util {
             Set<String> physicalCameraIdList = null;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 physicalCameraIdList = mCameraManager.getCameraCharacteristics(cameraId)
-                                                                 .getPhysicalCameraIds();
+                                                     .getPhysicalCameraIds();
             }
             if (physicalCameraIdList.isEmpty()) {
                 CameraLog.w(TAG, "cameraId :" + cameraId + " is not a MulitLogicalCameraId!");
@@ -225,6 +225,7 @@ public class Util {
     }
 
     public String getPhysicalCameraIds(String cameraId) {
+
         if (Build.VERSION.SDK_INT <= 29) {
             return null;
         }
@@ -392,7 +393,9 @@ public class Util {
 
         if (volume != 0) {
             MediaPlayer shootMP = MediaPlayer.create(mContext, Uri.parse("file:///system/media/audio/ui/camera_click.ogg"));
-            shootMP.start();
+            if (null != shootMP) {
+                shootMP.start();
+            }
         }
     }
 

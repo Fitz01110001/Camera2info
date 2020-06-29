@@ -1,37 +1,45 @@
 package com.fitz.camera2info.manualtest;
 
-import android.app.ActivityManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
-import android.media.Image;
-import android.media.ImageReader;
+import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CaptureFailure;
+import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.TotalCaptureResult;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.util.Size;
 import android.view.MotionEvent;
+import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.content.ContextCompat;
 
 import com.fitz.camera2info.CameraLog;
 import com.fitz.camera2info.R;
-import com.fitz.camera2info.base.BaseActivity;
+import com.fitz.camera2info.base.BaseCameraActivity;
 import com.fitz.camera2info.camerainfo.CameraItem;
-import com.fitz.camera2info.storage.SaveImage;
+import com.fitz.camera2info.flash.FlashManager;
+import com.fitz.camera2info.manager.Camera2Manager;
+import com.fitz.camera2info.mode.ModeManager;
+import com.fitz.camera2info.storage.StorageRunnable;
 import com.fitz.camera2info.thumbnail.ThumbNailManager;
 import com.fitz.camera2info.utils.Util;
 
@@ -46,12 +54,12 @@ import butterknife.OnClick;
  * @Author: Fitz
  * @CreateDate: 2019/12/21 19:04
  */
-public class CameraManualTest extends BaseActivity {
+public class CameraManualTest extends BaseCameraActivity {
 
-    @BindView(R.id.top_btn_1) Button topBtn1;
-    @BindView(R.id.top_btn_2) Button topBtn2;
-    @BindView(R.id.top_btn_3) Button topBtn3;
-    @BindView(R.id.top_btn_4) Button topBtn4;
+    @BindView(R.id.top_flash) ImageView topFlash;
+    @BindView(R.id.top_2) ImageView top2;
+    @BindView(R.id.top_3) ImageView top3;
+    @BindView(R.id.top_settings) ImageView topSettings;
     @BindView(R.id.btn_shutter) ImageButton btnShutter;
     @BindView(R.id.btn_switch) ImageButton btnSwitch;
     @BindView(R.id.camera_control) ConstraintLayout cameraControl;
@@ -60,13 +68,13 @@ public class CameraManualTest extends BaseActivity {
     @BindView(R.id.btn_thumbnail) ImageButton btnThumbnail;
 
     private static final String TAG = "CameraManualTest";
+    @BindView(R.id.tv_photo_mode) TextView tvPhotoMode;
+    @BindView(R.id.tv_video_mode) TextView tvVideoMode;
+
 
     private Context mContext = null;
-    private ImageReader mImageReader = null;
-    private ImageReader mImageReader1 = null;
-    private ImageReader mImageReader2 = null;
-    private ImageReader mImageReader3 = null;
-    private Handler mBackgroundHandler = null;
+
+
     private String mCurrentCameraId = "";
     private Size mDefaultSize = null;
     private TextureView mTextureView = null;
@@ -74,7 +82,6 @@ public class CameraManualTest extends BaseActivity {
     private boolean isMulitCam = false;
     private int mwidth = 0;
     private int mheight = 0;
-    private int mMaxImages = 5;
 
 
     @Override
@@ -91,8 +98,84 @@ public class CameraManualTest extends BaseActivity {
         mContext = this;
         parseIntent();
         initTextureView();
-        mCamera2Manager.onCreate(mCurrentCameraId);
-        initImageReader();
+        mCameraStateCallback = new Camera2Manager.CameraStateCallback() {
+            @Override
+            public void onConfigured(CameraCaptureSession cameraCaptureSession) {
+
+                CameraLog.d(TAG, "onConfigured");
+            }
+
+            @Override
+            public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
+
+            }
+
+            @Override
+            public void onOpened(CameraDevice camera) {
+
+            }
+
+            @Override
+            public void onDisconnected(CameraDevice camera) {
+
+            }
+
+            @Override
+            public void onClosed(CameraDevice camera) {
+
+            }
+
+            @Override
+            public void onError(CameraDevice camera, int error) {
+
+                CameraLog.e(TAG, "onError shit!!!");
+            }
+
+            @Override
+            public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
+
+            }
+
+            @Override
+            public void onCaptureProgressed(CameraCaptureSession session, CaptureRequest request, CaptureResult partialResult) {
+
+            }
+
+            @Override
+            public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+
+            }
+
+            @Override
+            public void onCaptureSequenceAborted(CameraCaptureSession session, int sequenceId) {
+
+            }
+
+            @Override
+            public void onCaptureBufferLost(CameraCaptureSession session, CaptureRequest request, Surface target, long frameNumber) {
+
+            }
+
+            @Override
+            public void onCaptureSequenceCompleted(CameraCaptureSession session, int sequenceId, long frameNumber) {
+
+            }
+
+            @Override
+            public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+
+            }
+        };
+        mCamera2Manager.onCreate(mCurrentCameraId, mCameraStateCallback);
+        mModeManager.onCreate(mCurrentCameraId, mOnSaveState);
+        mFlashManager = new FlashManager(this, topFlash, mCamera2Manager);
+
+        initUI();
+    }
+
+    private void initUI() {
+
+        setUICurrentMode(mModeManager.getCurrentModeName());
     }
 
     private void initThumbnail() {
@@ -132,45 +215,6 @@ public class CameraManualTest extends BaseActivity {
         CameraLog.d(TAG, "getLayoutParams, W: " + width + ", H: " + height);
 
         return layoutParams;
-    }
-
-    private void initImageReader() {
-
-        CameraLog.d(TAG, "initImageReader, mCurrentCameraId：" + mCurrentCameraId);
-
-        mBackgroundHandler = mCamera2Manager.getBackgroundThread();
-        Size mDefaultSize = mUtil.getDefaultSizeByCameraId(mCurrentCameraId);
-        mImageReader = ImageReader.newInstance(mDefaultSize.getWidth(), mDefaultSize.getHeight(), ImageFormat.JPEG, mMaxImages);
-        mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
-
-        if (mUtil.isMultiCam(mCurrentCameraId)) {
-            Size mRearMainSize = mUtil.getDefaultSizeByCameraId(mUtil.getPhysicalCameraIdsArray(mCurrentCameraId)[0]);
-
-            CameraLog.d(TAG, "initImageReader, mRearMainSize: " + mRearMainSize.getWidth() + ", " + mRearMainSize.getHeight());
-
-            mImageReader1 = ImageReader.newInstance(mRearMainSize.getWidth(), mRearMainSize.getHeight(), ImageFormat.JPEG, mMaxImages);
-            mImageReader1.setOnImageAvailableListener(mOnMulitImageAvailableListener1, mBackgroundHandler);
-
-            Size mRearSecondSize = mUtil.getDefaultSizeByCameraId(mUtil.getPhysicalCameraIdsArray(mCurrentCameraId)[1]);
-
-            CameraLog.d(TAG, "initImageReader, mRearSecondSize: " + mRearSecondSize.getWidth() + ", " + mRearSecondSize.getHeight());
-
-            mImageReader2 = ImageReader.newInstance(mRearSecondSize.getWidth(), mRearSecondSize.getHeight(), ImageFormat.JPEG, mMaxImages);
-            mImageReader2.setOnImageAvailableListener(mOnMulitImageAvailableListener2, mBackgroundHandler);
-
-            if (mUtil.isTripleCam(mCurrentCameraId)) {
-                Size mRearThirdSize = mUtil.getDefaultSizeByCameraId(mUtil.getPhysicalCameraIdsArray(mCurrentCameraId)[2]);
-
-                CameraLog.d(TAG, "initImageReader, mRearThirdSize: " + mRearThirdSize.getWidth() + ", " + mRearThirdSize.getHeight());
-
-                mImageReader3 = ImageReader.newInstance(mRearThirdSize.getWidth(), mRearThirdSize.getHeight(), ImageFormat.JPEG, mMaxImages);
-                mImageReader3.setOnImageAvailableListener(mOnMulitImageAvailableListener3, mBackgroundHandler);
-            }
-        }
-
-        mCamera2Manager.setImageReader(mImageReader, mImageReader1, mImageReader2, mImageReader3);
-
-        CameraLog.d(TAG, "initImageReader X");
     }
 
     private void parseIntent() {
@@ -239,84 +283,16 @@ public class CameraManualTest extends BaseActivity {
     }
 
 
-    private ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-
-            CameraLog.d(TAG, "mOnImageAvailableListener");
-
-            Image image = reader.acquireNextImage();
-
-            if (image == null) {
-                CameraLog.e(TAG, "[onImageAvailable] acquireNextImage null, return");
-                return;
-            }
-
-            mBackgroundHandler.post(new SaveImage(mOnSaveImageState, image, SaveImage.getImageName()));
-
-            CameraLog.d(TAG, "mOnImageAvailableListener X");
-        }
-    };
-
-    private ImageReader.OnImageAvailableListener mOnMulitImageAvailableListener1 = new ImageReader.OnImageAvailableListener() {
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-
-            CameraLog.d(TAG, "mOnMulitImageAvailableListener1");
-
-            Image image = reader.acquireNextImage();
-
-            if (image == null) {
-                CameraLog.e(TAG, "[onMulitImageAvailable] acquireNextImage null, return");
-                return;
-            }
-
-            mBackgroundHandler.post(new SaveImage(mOnSaveImageState, image, "Mulit_1_" + SaveImage.getImageName()));
-
-            CameraLog.d(TAG, "mOnMulitImageAvailableListener1 X");
-        }
-    };
-
-    private ImageReader.OnImageAvailableListener mOnMulitImageAvailableListener2 = new ImageReader.OnImageAvailableListener() {
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-
-            CameraLog.d(TAG, "mOnMulitImageAvailableListener2");
-
-            Image image = reader.acquireNextImage();
-
-            if (image == null) {
-                CameraLog.e(TAG, "[onMulitImageAvailable] acquireNextImage null, return");
-                return;
-            }
-
-            mBackgroundHandler.post(new SaveImage(mOnSaveImageState, image, "Mulit_2_" + SaveImage.getImageName()));
-
-            CameraLog.d(TAG, "mOnMulitImageAvailableListener2 X");
-        }
-    };
-
-    private ImageReader.OnImageAvailableListener mOnMulitImageAvailableListener3 = new ImageReader.OnImageAvailableListener() {
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-
-            CameraLog.d(TAG, "mOnMulitImageAvailableListener3");
-
-            Image image = reader.acquireNextImage();
-
-            if (image == null) {
-                CameraLog.e(TAG, "[onMulitImageAvailable] acquireNextImage null, return");
-                return;
-            }
-
-            mBackgroundHandler.post(new SaveImage(mOnSaveImageState, image, "Mulit_3_" + SaveImage.getImageName()));
-
-            CameraLog.d(TAG, "mOnMulitImageAvailableListener3 X");
-        }
-    };
-
-
-    @OnClick({R.id.btn_shutter, R.id.btn_switch, R.id.btn_thumbnail})
+    @RequiresApi(api = Build.VERSION_CODES.P)
+    @OnClick({R.id.btn_shutter,
+              R.id.btn_switch,
+              R.id.btn_thumbnail,
+              R.id.tv_photo_mode,
+              R.id.tv_video_mode,
+              R.id.top_flash,
+              R.id.top_2,
+              R.id.top_3,
+              R.id.top_settings})
     public void onViewClicked(View view) {
 
         switch (view.getId()) {
@@ -331,6 +307,24 @@ public class CameraManualTest extends BaseActivity {
 
         case R.id.btn_thumbnail:
             onThumbnailClick(view);
+            break;
+
+        case R.id.tv_photo_mode:
+            mModeManager.switchCameraMode(ModeManager.ModeName.PHOTO_MODE);
+            break;
+
+        case R.id.tv_video_mode:
+            //todo 还有点问题
+            //mModeManager.switchCameraMode(ModeManager.ModeName.VIDEO_MODE);
+            break;
+        case R.id.top_flash:
+            mFlashManager.onFlashClick();
+            break;
+        case R.id.top_2:
+            break;
+        case R.id.top_3:
+            break;
+        case R.id.top_settings:
             break;
         }
     }
@@ -367,13 +361,18 @@ public class CameraManualTest extends BaseActivity {
         CameraLog.d(TAG, "onSwitchClick");
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.P)
     private void onShutterClick() {
 
         setUIEnable(false);
-        mCamera2Manager.takeShot();
+        if (ModeManager.ModeName.PHOTO_MODE == mModeManager.getCurrentModeName()) {
+            mCamera2Manager.takeCapture();
+        } else {
+            mCamera2Manager.videoButtonClick();
+        }
     }
 
-    public SaveImage.onSaveImageState mOnSaveImageState = new SaveImage.onSaveImageState() {
+    public StorageRunnable.onSaveState mOnSaveState = new StorageRunnable.onSaveState() {
         @Override
         public Context getContext() {
 
@@ -382,6 +381,25 @@ public class CameraManualTest extends BaseActivity {
 
         @Override
         public void onImageSaved(boolean success, Uri uri) {
+
+            CameraLog.d(TAG, "onImageSaved, success: " + success);
+
+            mThumbNailManager.updateThumbnail(uri);
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+
+                    updateThumbnailView(uri);
+                    setUIEnable(true);
+                }
+            });
+        }
+
+        @Override
+        public void onVideoSaved(Uri uri) {
+
+            CameraLog.d(TAG, "onVideoSaved");
 
             mThumbNailManager.updateThumbnail(uri);
 
@@ -410,7 +428,7 @@ public class CameraManualTest extends BaseActivity {
     }
 
     @Override
-    protected void setUIEnable(Boolean enable) {
+    public void setUIEnable(Boolean enable) {
 
         if (enable) {
 
@@ -420,11 +438,8 @@ public class CameraManualTest extends BaseActivity {
             CameraLog.d(TAG, "setUIEnable, disable");
         }
 
-        topBtn1.setClickable(enable);
-        topBtn2.setClickable(enable);
-        topBtn3.setClickable(enable);
-        topBtn4.setClickable(enable);
-        btnShutter.setClickable(enable);
+
+        //btnShutter.setClickable(enable);
         btnSwitch.setClickable(enable);
         btnThumbnail.setClickable(enable);
         activcityManualRoot.setOnTouchListener(new View.OnTouchListener() {
@@ -432,6 +447,7 @@ public class CameraManualTest extends BaseActivity {
             public boolean onTouch(View v, MotionEvent event) {
 
                 if (enable) {
+                    CameraLog.d(TAG, "root onTouch: " + event.getRawX() + "-" + event.getRawY());
 
                 } else {
                     return false;
@@ -439,6 +455,23 @@ public class CameraManualTest extends BaseActivity {
                 return false;
             }
         });
+    }
+
+    @Override
+    public void setUICurrentMode(ModeManager.ModeName modeName) {
+
+        switch (modeName) {
+        case PHOTO_MODE:
+            tvPhotoMode.setTextColor(ContextCompat.getColor(this, R.color.color_mode_selected));
+            tvVideoMode.setTextColor(ContextCompat.getColor(this, R.color.color_mode_unselected));
+            btnShutter.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.shutter_selector));
+            break;
+        case VIDEO_MODE:
+            tvPhotoMode.setTextColor(ContextCompat.getColor(this, R.color.color_mode_unselected));
+            tvVideoMode.setTextColor(ContextCompat.getColor(this, R.color.color_mode_selected));
+            btnShutter.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.cam_core_capture_button_video_start_icn));
+            break;
+        }
     }
 
 }

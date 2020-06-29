@@ -19,4 +19,6 @@
     <string name="camera_X_check">cameraX API 兼容性检查</string>
     <string name="camera_api2_about">查看API方法结果</string>
     <string name="camera_X_about">查看CameraX方法结果</string>
+    <string name="mode_photo">拍照</string>
+    <string name="mode_video">视频</string>
 </resources>
