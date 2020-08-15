@@ -5,9 +5,8 @@ import android.os.Handler;
 
 import androidx.annotation.Nullable;
 
-import com.fitz.camera2info.flash.FlashManager;
+import com.fitz.camera2info.manager.flash.FlashManager;
 import com.fitz.camera2info.mode.BaseMode;
-import com.fitz.camera2info.mode.ModeManager;
 
 /**
  * @ProjectName: Camera2info

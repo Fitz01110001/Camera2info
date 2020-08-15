@@ -3,7 +3,6 @@ package com.fitz.camera2info.manager;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
-import android.graphics.ImageFormat;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -34,8 +33,8 @@ import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 
 import com.fitz.camera2info.CameraLog;
+import com.fitz.camera2info.manager.flash.FlashManager;
 import com.fitz.camera2info.camerainfo.CameraItem;
-import com.fitz.camera2info.flash.FlashManager;
 import com.fitz.camera2info.mode.BaseMode;
 import com.fitz.camera2info.mode.ModeManager;
 import com.fitz.camera2info.mode.ModeManagerInterface;
@@ -91,6 +90,7 @@ public class Camera2Manager implements CameraManagerInterface {
     private String mCameraId = "-1";
     private String imageName = null;
     private boolean mIsRecordingVideo = false;
+    private boolean mConverged = false;
     private FlashManager.Flash mFlashState = FlashManager.Flash.OFF;
 
     private CameraManager mCameraManager = null;
@@ -105,8 +105,6 @@ public class Camera2Manager implements CameraManagerInterface {
     private Rect mSensorRect = null;
     private Rect mCurrentRect = null;
 
-    private Size mPreviewSize = null;
-    private Size mDefaultSize = null;
     private Size mVideoSize = null;
     private Surface mPreviewSurface = null;
     private TextureView mTextureView = null;
@@ -184,16 +182,16 @@ public class Camera2Manager implements CameraManagerInterface {
                                       .getCameraCharacteristics();
         StreamConfigurationMap map = mCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
-        mPreviewSize = choosePreview4_3Size(map.getOutputSizes(ImageFormat.JPEG));
-        mDefaultSize = mUtil.getDefaultSizeByCameraId(mCameraId);
+        Size previewSize = mUtil.getPreviewSize(Util.SIZE_4_3);
+
         if (ModeManager.ModeName.VIDEO_MODE == mModeName) {
             mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
 
-            CameraLog.d(TAG, "setupPreview, mVideoSize: " + mVideoSize.getHeight() + "*" + mVideoSize.getWidth());
+            CameraLog.d(TAG, "setupPreview, mVideoSize: " + mVideoSize.getWidth() + "*" + mVideoSize.getHeight());
         }
 
-        int rotatedPreviewWidth = mDefaultSize.getWidth();
-        int rotatedPreviewHeight = mDefaultSize.getHeight();
+        int rotatedPreviewWidth = previewSize.getWidth();
+        int rotatedPreviewHeight = previewSize.getHeight();
 
         // Find out if we need to swap dimension to get the preview size relative to sensor
         // coordinate.
@@ -227,8 +225,8 @@ public class Camera2Manager implements CameraManagerInterface {
         }
 
         if (swappedDimensions) {
-            rotatedPreviewWidth = mDefaultSize.getHeight();
-            rotatedPreviewHeight = mDefaultSize.getWidth();
+            rotatedPreviewWidth = previewSize.getHeight();
+            rotatedPreviewHeight = previewSize.getWidth();
         }
 
         SurfaceTexture texture = mTextureView.getSurfaceTexture();
@@ -236,21 +234,6 @@ public class Camera2Manager implements CameraManagerInterface {
         mPreviewSurface = new Surface(texture);
 
         CameraLog.d(TAG, "setupTextureView X, W: " + rotatedPreviewWidth + ", H:" + rotatedPreviewHeight);
-    }
-
-    private Size choosePreview4_3Size(Size[] outputSizes) {
-
-        for (Size size : outputSizes) {
-            float ratio = (float) size.getWidth() / (float) size.getHeight();
-            CameraLog.d(TAG, "choosePreviewSize, size: " + size.toString() + ", ratio: " + ratio);
-
-            if (Math.abs(ratio - Util.SIZE_4_3) == 0) {
-
-                CameraLog.d(TAG, "choosePreviewSize, find 4_3 size : " + size.toString());
-                return size;
-            }
-        }
-        return null;
     }
 
     /**
@@ -263,7 +246,7 @@ public class Camera2Manager implements CameraManagerInterface {
     private static Size chooseVideoSize(Size[] choices) {
 
         for (Size size : choices) {
-            if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
+            if (size.getWidth() == (size.getHeight() * Util.SIZE_4_3) && (size.getWidth() <= 1080)) {
                 return size;
             }
         }
@@ -273,35 +256,12 @@ public class Camera2Manager implements CameraManagerInterface {
     }
 
     public void onPause() {
-
-    }
-
-    public void onStop() {
-
+        resetRequest();
         closeCamera();
     }
 
-
-    private void setUpCameraOutputs() {
-
-        mSensorRect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-        mMaxZoom = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
-        mCurrentRect = cropRegionForZoom(defaultZoomRatio);
-
-    }
-
-    private Rect cropRegionForZoom(float ratio) {
-
-        CameraLog.d(TAG, "ratio:" + ratio);
-        int xCenter = mSensorRect.width() / 2;
-        int yCenter = mSensorRect.height() / 2;
-        int xDelta = (int) (0.5f * mSensorRect.width() / ratio);
-        int yDelta = (int) (0.5f * mSensorRect.height() / ratio);
-        /*CameraLog.d(TAG, "xCenter:" + xCenter);
-        CameraLog.d(TAG, "yCenter:" + yCenter);
-        CameraLog.d(TAG, "xDelta:" + xDelta);
-        CameraLog.d(TAG, "yDelta:" + yDelta);*/
-        return new Rect(xCenter - xDelta, yCenter - yDelta, xCenter + xDelta, yCenter + yDelta);
+    private void resetRequest() {
+        resetFlashRequest();
     }
 
     public void closeCamera() {
@@ -329,6 +289,30 @@ public class Camera2Manager implements CameraManagerInterface {
         }
     }
 
+    private void setUpCameraOutputs() {
+
+        mSensorRect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+        mMaxZoom = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
+        mCurrentRect = cropRegionForZoom(defaultZoomRatio);
+
+    }
+
+    private Rect cropRegionForZoom(float ratio) {
+
+        CameraLog.d(TAG, "ratio:" + ratio);
+        int xCenter = mSensorRect.width() / 2;
+        int yCenter = mSensorRect.height() / 2;
+        int xDelta = (int) (0.5f * mSensorRect.width() / ratio);
+        int yDelta = (int) (0.5f * mSensorRect.height() / ratio);
+        /*CameraLog.d(TAG, "xCenter:" + xCenter);
+        CameraLog.d(TAG, "yCenter:" + yCenter);
+        CameraLog.d(TAG, "xDelta:" + xDelta);
+        CameraLog.d(TAG, "yDelta:" + yDelta);*/
+        return new Rect(xCenter - xDelta, yCenter - yDelta, xCenter + xDelta, yCenter + yDelta);
+    }
+
+
+
     private int getOrientation(int rotation) {
         // Sensor orientation is 90 for most devices, or 270 for some devices (eg. Nexus 5X)
         // We have to take that into account and rotate JPEG properly.
@@ -345,6 +329,7 @@ public class Camera2Manager implements CameraManagerInterface {
     }
 
     /**
+     * after this.onResume
      * preview Step 1, open camera
      */
     public void openCamera(String cameraId) {
@@ -501,7 +486,7 @@ public class Camera2Manager implements CameraManagerInterface {
                 }
 
                 mCameraStateCallback.onConfigured(cameraCaptureSession);
-                setRepeatingPreview(null);
+                submitRequest(Request.PREVIEW, null);
             }
         }
 
@@ -515,20 +500,22 @@ public class Camera2Manager implements CameraManagerInterface {
     };
 
     /**
+     * use submitRequest(Request.PREVIEW, callback) to do this
      * preview setp 5, use session setRequset displaying the camera preview.
      */
-    private void setRepeatingPreview(CameraCaptureSession.CaptureCallback captureCallback) {
+    private void sendRepeatingPreviewRequest(CameraCaptureSession.CaptureCallback previewCallback) {
 
         if (null == mPreviewBuilder) {
             return;
         }
+        CameraLog.d(TAG,"setRepeatingPreview");
 
         setBuilderCache(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
         addCacheToBuilder(mPreviewBuilder);
         mPreviewRequest = mPreviewBuilder.build();
         try {
             if (mSession != null) {
-                mSession.setRepeatingRequest(mPreviewRequest, captureCallback == null ? mCaptureCallback : captureCallback, mBackgroundHandler);
+                mSession.setRepeatingRequest(mPreviewRequest, previewCallback, mBackgroundHandler);
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -551,8 +538,8 @@ public class Camera2Manager implements CameraManagerInterface {
         }
 
         @Override
-        public void onCaptureProgressed(
-                @NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureResult partialResult) {
+        public void onCaptureProgressed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request,
+                @NonNull CaptureResult partialResult) {
 
             super.onCaptureProgressed(session, request, partialResult);
             mCameraStateCallback.onCaptureProgressed(session, request, partialResult);
@@ -560,10 +547,14 @@ public class Camera2Manager implements CameraManagerInterface {
 
         @Override
         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-
             super.onCaptureCompleted(session, request, result);
-            mCameraStateCallback.onCaptureCompleted(session, request, result);
+            CameraLog.d(CaptureTAG, "onCaptureCompleted, mFlashState: " + mFlashState + ", mConverged: " + mConverged);
 
+            if (mFlashState == FlashManager.Flash.ON && mConverged) {
+                resetFlashRequest();
+            }
+
+            mCameraStateCallback.onCaptureCompleted(session, request, result);
         }
 
         @Override
@@ -575,23 +566,20 @@ public class Camera2Manager implements CameraManagerInterface {
         }
 
         @Override
-        public void onCaptureBufferLost(
-                @NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull Surface target, long frameNumber) {
-
+        public void onCaptureBufferLost(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull Surface target,
+                long frameNumber) {
             super.onCaptureBufferLost(session, request, target, frameNumber);
+
             mCameraStateCallback.onCaptureBufferLost(session, request, target, frameNumber);
             CameraLog.e(CaptureTAG, "onCaptureBufferLost");
         }
 
         @Override
         public void onCaptureSequenceCompleted(@NonNull CameraCaptureSession session, int sequenceId, long frameNumber) {
-
             super.onCaptureSequenceCompleted(session, sequenceId, frameNumber);
+
             mCameraStateCallback.onCaptureSequenceCompleted(session, sequenceId, frameNumber);
             CameraLog.d(CaptureTAG, "onCaptureSequenceCompleted");
-            if(mFlashState == FlashManager.Flash.ON){
-                resetFlashRequest();
-            }
         }
 
         @Override
@@ -603,10 +591,6 @@ public class Camera2Manager implements CameraManagerInterface {
         }
     };
 
-    private void resetFlashRequest() {
-
-    }
-
     /**
      * capture step 1, 生成照片名称，发出声音，发出拍照请求
      */
@@ -617,14 +601,15 @@ public class Camera2Manager implements CameraManagerInterface {
         CameraLog.d(TAG, "takeShot, imageName" + imageName);
 
         mUtil.playSound();
-        sendShotRequest();
+        submitRequest(Request.CAPTURE, null);
         return imageName;
     }
 
     /**
+     * use submitRequest(Request.CAPTURE, null) to do this
      * capture step 2, 发出拍照请求
      */
-    private void sendShotRequest() {
+    private void sendCaptureRequest() {
 
         CameraLog.d(TAG, "sendShotRequest");
 
@@ -635,15 +620,29 @@ public class Camera2Manager implements CameraManagerInterface {
             int rotation = ((Activity) mContext).getWindowManager()
                                                 .getDefaultDisplay()
                                                 .getRotation();
+
             CameraLog.d(TAG, "sendShotRequest, rotation: " + rotation);
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
 
 
             if (mFlashState == FlashManager.Flash.ON) {
-                triggerFlash(captureBuilder);
+                if (!mConverged) {
+                    triggerFlash(captureBuilder);
+                } else {
+                    addCacheToBuilder(captureBuilder);
+                    mSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
+                        @Override
+                        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request,
+                                @NonNull TotalCaptureResult result) {
+
+                            super.onCaptureCompleted(session, request, result);
+                            resetFlashRequest();
+                        }
+                    }, mBackgroundHandler);
+                }
             } else {
                 addCacheToBuilder(captureBuilder);
-                mSession.capture(captureBuilder.build(), null, mBackgroundHandler);
+                mSession.capture(captureBuilder.build(), mCaptureCallback, mBackgroundHandler);
             }
 
         } catch (CameraAccessException e) {
@@ -659,31 +658,39 @@ public class Camera2Manager implements CameraManagerInterface {
         setBuilderCache(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START);
         setBuilderCache(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
         addCacheToBuilder(mPreviewBuilder);
-        submitRequest(Request.PREVIEW, new CameraCaptureSession.CaptureCallback() {
+        submitRequest(Request.PREVIEW, new FlashManager.AETriggerResult() {
+
             @Override
-            public void onCaptureCompleted(
-                    @NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+            public void converged(boolean converged) {
+                super.converged(converged);
 
-                super.onCaptureCompleted(session, request, result);
+                if (converged && (mConverged != converged)) {
+                    mConverged = converged;
+                    CameraLog.d(TAG, "triggerFlash, onCaptureCompleted converged: " + converged);
 
-                CameraLog.d(TAG, "triggerFlash, onCaptureCompleted");
-                Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
-                boolean converged = ((null != aeState) && (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED));
-
-                CameraLog.d(TAG, "triggerFlash, onCaptureCompleted aeState: " + aeState);
-
-                if (converged) {
                     setBuilderCache(CaptureRequest.CONTROL_AE_LOCK, Boolean.TRUE);
-                    addCacheToBuilder(captureBuilder);
                     try {
-                        CameraLog.d(TAG, "triggerFlash, onCaptureCompleted converged: " + converged);
-                        mSession.capture(captureBuilder.build(), null, mBackgroundHandler);
-                    } catch (CameraAccessException e) {
+                        submitRequest(Camera2Manager.Request.CAPTURE, null);
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
+                } else {
+                    resetFlashRequest();
                 }
             }
         });
+    }
+
+    private void resetFlashRequest() {
+
+        CameraLog.d(TAG, "resetFlashRequest");
+
+        mConverged = false;
+        setBuilderCache(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL);
+        setBuilderCache(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
+        setBuilderCache(CaptureRequest.CONTROL_AE_LOCK, Boolean.FALSE);
+        submitRequest(Request.PREVIEW, null);
+        CameraLog.d(TAG, "resetFlashRequest X");
     }
 
     /**
@@ -711,9 +718,8 @@ public class Camera2Manager implements CameraManagerInterface {
     }
 
     @Override
-    public void setImageReader(ImageReader imageReader,
-                               @Nullable ImageReader mRearMainImageReader,
-                               @Nullable ImageReader mRearSecondImageReader, @Nullable ImageReader mRearThirdImageReader) {
+    public void setImageReader(ImageReader imageReader, @Nullable ImageReader mRearMainImageReader, @Nullable ImageReader mRearSecondImageReader,
+            @Nullable ImageReader mRearThirdImageReader) {
 
         this.mImageReader = imageReader;
         if (mRearMainImageReader != null) {
@@ -756,14 +762,14 @@ public class Camera2Manager implements CameraManagerInterface {
 
     private void submitRequest(Request request, CameraCaptureSession.CaptureCallback callback) {
 
-        CameraLog.d(TAG, "submitRequest");
+        CameraLog.d(TAG, "submitRequest，Request：" + request);
 
         switch (request) {
         case CAPTURE:
-            sendShotRequest();
+            sendCaptureRequest();
             break;
         case PREVIEW:
-            setRepeatingPreview(callback);
+            sendRepeatingPreviewRequest(callback);
             break;
         }
     }
@@ -810,7 +816,7 @@ public class Camera2Manager implements CameraManagerInterface {
                 }
             }));
 
-            CameraLog.d(TAG, "setBuilderCache, name: " + name);
+            CameraLog.v(TAG, "setBuilderCache, name: " + name);
         } else {
             CameraLog.e(TAG, "shit! os.Build.VERSION is less Q");
         }
@@ -878,12 +884,10 @@ public class Camera2Manager implements CameraManagerInterface {
 
         mModeName = modeName.getModeName();
         CameraLog.d(TAG, "switchMode: " + mModeName);
-
         reOpenCamera(mCameraId);
     }
 
     private void reOpenCamera(String cameraId) {
-
         closeCamera();
         openCamera(cameraId);
     }
@@ -914,7 +918,7 @@ public class Camera2Manager implements CameraManagerInterface {
 
         SurfaceTexture texture = mTextureView.getSurfaceTexture();
         assert texture != null;
-        texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+        texture.setDefaultBufferSize(mVideoSize.getWidth(), mVideoSize.getHeight());
         mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
         List<Surface> surfaces = new ArrayList<>();
 
@@ -939,7 +943,7 @@ public class Camera2Manager implements CameraManagerInterface {
 
                 CameraLog.d(TAG, "startRecordingVideo, onConfigured");
                 mSession = cameraCaptureSession;
-                setRepeatingPreview(null);
+                submitRequest(Request.PREVIEW, null);
                 mContext.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {

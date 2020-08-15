@@ -29,7 +29,6 @@ public class CapMode extends BaseMode {
     private ImageReader mImageReader3 = null;
 
 
-
     public CapMode(Context context, CameraManagerInterface cameraManagerInterface, Util util) {
 
         super(context, cameraManagerInterface, util);
@@ -42,19 +41,19 @@ public class CapMode extends BaseMode {
         CameraLog.d(TAG, "initImageReader, mCurrentCameraId：" + mCurrentCameraId);
 
 
-        Size mDefaultSize = mUtil.getDefaultSizeByCameraId(mCurrentCameraId);
-        mImageReader = ImageReader.newInstance(mDefaultSize.getWidth(), mDefaultSize.getHeight(), ImageFormat.JPEG, MAXIMAGES);
+        Size captureSize = mUtil.getCaptureSizeByCameraId(mCurrentCameraId, Util.SIZE_4_3, ImageFormat.JPEG);
+        mImageReader = ImageReader.newInstance(captureSize.getWidth(), captureSize.getHeight(), ImageFormat.JPEG, MAXIMAGES);
         mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
 
         if (mUtil.isMultiCam(mCurrentCameraId)) {
-            Size mRearMainSize = mUtil.getDefaultSizeByCameraId(mUtil.getPhysicalCameraIdsArray(mCurrentCameraId)[0]);
+            Size mRearMainSize = mUtil.getCaptureSizeByCameraId(mUtil.getPhysicalCameraIdsArray(mCurrentCameraId)[0], Util.SIZE_4_3, ImageFormat.JPEG);
 
             CameraLog.d(TAG, "initImageReader, mRearMainSize: " + mRearMainSize.getWidth() + ", " + mRearMainSize.getHeight());
 
             mImageReader1 = ImageReader.newInstance(mRearMainSize.getWidth(), mRearMainSize.getHeight(), ImageFormat.JPEG, MAXIMAGES);
             mImageReader1.setOnImageAvailableListener(mOnMulitImageAvailableListener1, mBackgroundHandler);
 
-            Size mRearSecondSize = mUtil.getDefaultSizeByCameraId(mUtil.getPhysicalCameraIdsArray(mCurrentCameraId)[1]);
+            Size mRearSecondSize = mUtil.getCaptureSizeByCameraId(mUtil.getPhysicalCameraIdsArray(mCurrentCameraId)[1], Util.SIZE_4_3, ImageFormat.JPEG);
 
             CameraLog.d(TAG, "initImageReader, mRearSecondSize: " + mRearSecondSize.getWidth() + ", " + mRearSecondSize.getHeight());
 
@@ -62,7 +61,7 @@ public class CapMode extends BaseMode {
             mImageReader2.setOnImageAvailableListener(mOnMulitImageAvailableListener2, mBackgroundHandler);
 
             if (mUtil.isTripleCam(mCurrentCameraId)) {
-                Size mRearThirdSize = mUtil.getDefaultSizeByCameraId(mUtil.getPhysicalCameraIdsArray(mCurrentCameraId)[2]);
+                Size mRearThirdSize = mUtil.getCaptureSizeByCameraId(mUtil.getPhysicalCameraIdsArray(mCurrentCameraId)[2], Util.SIZE_4_3, ImageFormat.JPEG);
 
                 CameraLog.d(TAG, "initImageReader, mRearThirdSize: " + mRearThirdSize.getWidth() + ", " + mRearThirdSize.getHeight());
 
@@ -89,7 +88,7 @@ public class CapMode extends BaseMode {
                 return;
             }
 
-            if(null == mBackgroundHandler){
+            if (null == mBackgroundHandler) {
                 mBackgroundHandler = mCameraManagerInterface.getBackgroundThread();
             }
             mBackgroundHandler.post(new StorageRunnable(mOnSaveState, image, StorageRunnable.getImageName()));
@@ -111,7 +110,7 @@ public class CapMode extends BaseMode {
                 return;
             }
 
-            if(null == mBackgroundHandler){
+            if (null == mBackgroundHandler) {
                 mBackgroundHandler = mCameraManagerInterface.getBackgroundThread();
             }
             mBackgroundHandler.post(new StorageRunnable(mOnSaveState, image, "Mulit_1_" + StorageRunnable.getImageName()));
@@ -133,7 +132,7 @@ public class CapMode extends BaseMode {
                 return;
             }
 
-            if(null == mBackgroundHandler){
+            if (null == mBackgroundHandler) {
                 mBackgroundHandler = mCameraManagerInterface.getBackgroundThread();
             }
             mBackgroundHandler.post(new StorageRunnable(mOnSaveState, image, "Mulit_2_" + StorageRunnable.getImageName()));
@@ -155,7 +154,7 @@ public class CapMode extends BaseMode {
                 return;
             }
 
-            if(null == mBackgroundHandler){
+            if (null == mBackgroundHandler) {
                 mBackgroundHandler = mCameraManagerInterface.getBackgroundThread();
             }
             mBackgroundHandler.post(new StorageRunnable(mOnSaveState, image, "Mulit_3_" + StorageRunnable.getImageName()));

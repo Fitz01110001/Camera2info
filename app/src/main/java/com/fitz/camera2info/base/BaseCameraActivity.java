@@ -12,7 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.fitz.camera2info.CameraLog;
-import com.fitz.camera2info.flash.FlashManager;
+import com.fitz.camera2info.manager.flash.FlashManager;
 import com.fitz.camera2info.manager.Camera2Manager;
 import com.fitz.camera2info.mode.ModeManager;
 import com.fitz.camera2info.thumbnail.ThumbNailManager;

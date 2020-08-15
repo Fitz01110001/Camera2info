@@ -127,8 +127,8 @@ public class CameraDumpCameraActivity extends BaseCameraActivity {
         };
         mCamera2Manager.onCreate(mCameraId,mCameraStateCallback);
 
-        Size mDefaultSize = mUtil.getDefaultSizeByCameraId(mCameraId);
-        ImageReader mImageReader = ImageReader.newInstance(mDefaultSize.getWidth(), mDefaultSize.getHeight(), ImageFormat.JPEG, 5);
+        Size captureSize = mUtil.getCaptureSizeByCameraId(mCameraId, Util.SIZE_4_3, ImageFormat.JPEG);
+        ImageReader mImageReader = ImageReader.newInstance(captureSize.getWidth(), captureSize.getHeight(), ImageFormat.JPEG, 5);
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader reader) {

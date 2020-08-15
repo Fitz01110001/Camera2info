@@ -246,19 +246,49 @@ public class Util {
         return null;
     }
 
-    public Size getDefaultSizeByCameraId(String cameraId) {
+    public Size getPreviewSize(float sizeRatio) {
+
+        int screenH = getScreenHeight(mContext);
+        int screenW = getScreenWidth(mContext);
+
+        if (screenH > screenW) {
+            screenH = (int) (screenW * sizeRatio);
+        }
+
+        CameraLog.d(TAG,"getPreviewSize, screenW: " + screenW + ", screenH: " + screenH);
+        return new Size(screenW,screenH);
+    }
+
+    public Size getCaptureSizeByCameraId(String cameraId, float sizeRatio, int imageFormat) {
+
+        Size maxSize = null;
+        Size[] outputSizes = null;
 
         try {
-            return Arrays.asList(mCameraManager.getCameraCharacteristics(cameraId)
-                                               .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-                                               .getOutputSizes(ImageFormat.JPEG))
-                         .get(0);
+            outputSizes = mCameraManager.getCameraCharacteristics(cameraId)
+                                        .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                                        .getOutputSizes(imageFormat);
         } catch (CameraAccessException e) {
             CameraLog.e(TAG, "getDefaultSizeByCameraId, shit!");
             e.printStackTrace();
         }
 
-        return null;
+
+        for (Size size : outputSizes) {
+            float ratio = (float) size.getWidth() / (float) size.getHeight();
+            CameraLog.v(TAG, "choosePreviewSize, size: " + size.toString() + ", ratio: " + ratio);
+
+            if (Math.abs(ratio - sizeRatio) == 0) {
+                if (null == maxSize) {
+                    maxSize = size;
+                } else if ((maxSize.getWidth() * maxSize.getWidth()) < (size.getWidth() * size.getHeight())) {
+                    maxSize = size;
+                }
+            }
+        }
+
+        CameraLog.d(TAG, "getCaptureSize, cameraId: " + cameraId + ", sizeRatio: " + sizeRatio + ", find size : " + maxSize.toString());
+        return maxSize;
     }
 
     public String getMainPhysicalId(String cameraId) {

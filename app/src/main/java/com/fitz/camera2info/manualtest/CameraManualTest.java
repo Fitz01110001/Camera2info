@@ -36,7 +36,7 @@ import com.fitz.camera2info.CameraLog;
 import com.fitz.camera2info.R;
 import com.fitz.camera2info.base.BaseCameraActivity;
 import com.fitz.camera2info.camerainfo.CameraItem;
-import com.fitz.camera2info.flash.FlashManager;
+import com.fitz.camera2info.manager.flash.FlashManager;
 import com.fitz.camera2info.manager.Camera2Manager;
 import com.fitz.camera2info.mode.ModeManager;
 import com.fitz.camera2info.storage.StorageRunnable;
@@ -270,10 +270,15 @@ public class CameraManualTest extends BaseCameraActivity {
     };
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        mCamera2Manager.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
 
         super.onDestroy();
-        mCamera2Manager.onStop();
     }
 
     @Override
