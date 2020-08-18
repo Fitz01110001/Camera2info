@@ -22,6 +22,8 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import static android.hardware.camera2.CameraMetadata.*;
+
 /**
  * @ProjectName: Camera2info
  * @Package: com.fitz.camera2info.manager.flash
@@ -32,7 +34,6 @@ import java.util.Set;
 public class FlashManager extends BaseStateManager {
     private static final String TAG = "FlashManager";
 
-    private static TriggerStateMachine mStateMachine = null;
 
     private int mFlashButtonImage = R.drawable.flash_off;
     private Flash mFlashState = Flash.OFF;
@@ -41,15 +42,6 @@ public class FlashManager extends BaseStateManager {
     private CameraManagerInterface mCameraManagerInterface = null;
     private boolean mNeedCapture = true;
 
-
-    private static final Set<Integer> TRIGGER_DONE_STATES = new HashSet<Integer>() {
-        {
-            add(CaptureResult.CONTROL_AE_STATE_INACTIVE);
-            add(CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED);
-            add(CaptureResult.CONTROL_AE_STATE_CONVERGED);
-            add(CaptureResult.CONTROL_AE_STATE_LOCKED);
-        }
-    };
 
     public enum Flash {
         ON,
@@ -62,8 +54,6 @@ public class FlashManager extends BaseStateManager {
         mFlashButton = view;
         mCameraManagerInterface = cameraManagerInterface;
         updateFlashState(mFlashButtonImage);
-
-        mStateMachine = new TriggerStateMachine(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START, TRIGGER_DONE_STATES);
     }
 
     public void onFlashClick() {
@@ -95,62 +85,4 @@ public class FlashManager extends BaseStateManager {
         mFlashButton.setImageDrawable(ContextCompat.getDrawable(mContext, flashStateDrawable));
     }
 
-    public Flash getFlashState() {
-
-        return mFlashState;
-    }
-
-    public static class AETriggerResult extends CameraCaptureSession.CaptureCallback {
-        private long onConvergedFrame = 0;
-
-        public AETriggerResult() {
-
-            super();
-        }
-
-        public void converged(boolean converged) {
-
-        }
-
-        @Override
-        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-            super.onCaptureCompleted(session, request, result);
-
-            Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
-            boolean done = mStateMachine.update(result.getFrameNumber(),
-                                                result.getRequest()
-                                                      .get(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER),
-                                                aeState);
-
-            if (done && onConvergedFrame == 0) {
-                onConvergedFrame = result.getFrameNumber();
-
-                CameraLog.d(TAG,
-                            "AETriggerResult, onCaptureCompleted, aeState: " + aeState + ", done: " + done + ", onConvergedFrame: " + onConvergedFrame);
-                converged(done);
-            }
-        }
-
-        @Override
-        public void onCaptureFailed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureFailure failure) {
-            super.onCaptureFailed(session, request, failure);
-            converged(false);
-        }
-
-        @Override
-        public void onCaptureSequenceCompleted(@NonNull CameraCaptureSession session, int sequenceId, long frameNumber) {
-            super.onCaptureSequenceCompleted(session, sequenceId, frameNumber);
-        }
-
-        @Override
-        public void onCaptureSequenceAborted(@NonNull CameraCaptureSession session, int sequenceId) {
-            super.onCaptureSequenceAborted(session, sequenceId);
-        }
-
-        @Override
-        public void onCaptureBufferLost(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull Surface target,
-                long frameNumber) {
-            super.onCaptureBufferLost(session, request, target, frameNumber);
-        }
-    }
 }

@@ -4,6 +4,8 @@ import android.hardware.camera2.CaptureResult;
 
 import androidx.annotation.Nullable;
 
+import com.fitz.camera2info.CameraLog;
+
 import java.util.Set;
 
 
@@ -27,6 +29,8 @@ import java.util.Set;
  */
 
 public final class TriggerStateMachine {
+    private String TAG = "TriggerStateMachine";
+
     private enum State {
         WAITING_FOR_TRIGGER,
         TRIGGERED
@@ -52,6 +56,8 @@ public final class TriggerStateMachine {
     public boolean update(long frameNumber, @Nullable Integer triggerState, @Nullable Integer state) {
         boolean triggeredNow = triggerState != null && triggerState == mTriggerStart;
         boolean doneNow = mDoneStates.contains(state);
+
+        CameraLog.v(TAG,"update, frameNumber: " + frameNumber + ", triggerState: " + triggerState + ", state: " + state);
 
         if (mCurrentState == State.WAITING_FOR_TRIGGER) {
             if (mLastTriggerFrameNumber == null || frameNumber > mLastTriggerFrameNumber) {

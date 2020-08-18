@@ -33,6 +33,7 @@ import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 
 import com.fitz.camera2info.CameraLog;
+import com.fitz.camera2info.manager.flash.AETriggerResult;
 import com.fitz.camera2info.manager.flash.FlashManager;
 import com.fitz.camera2info.camerainfo.CameraItem;
 import com.fitz.camera2info.mode.BaseMode;
@@ -52,6 +53,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+
+import static android.hardware.camera2.CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START;
 
 /**
  * @ProjectName: Camera2Info
@@ -99,6 +102,7 @@ public class Camera2Manager implements CameraManagerInterface {
     private CameraDevice mCameraDevice = null;
     private CaptureRequest.Builder mPreviewBuilder = null;
     private CaptureRequest mPreviewRequest = null;
+    private FlashManager mFlashManager = null;
 
     private Handler mBackgroundHandler = null;
     private HandlerThread mBackgroundThread = null;
@@ -654,11 +658,12 @@ public class Camera2Manager implements CameraManagerInterface {
 
         CameraLog.d(TAG, "triggerFlash");
 
+        //注意这里要给AF设置自动，其他条件可能会出现极暗环境拍黑色
         setBuilderCache(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE);
         setBuilderCache(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START);
-        setBuilderCache(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
+        setBuilderCache(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
         addCacheToBuilder(mPreviewBuilder);
-        submitRequest(Request.PREVIEW, new FlashManager.AETriggerResult() {
+        AETriggerResult aeCallback = new AETriggerResult() {
 
             @Override
             public void converged(boolean converged) {
@@ -676,9 +681,12 @@ public class Camera2Manager implements CameraManagerInterface {
                     }
                 } else {
                     resetFlashRequest();
+                    reset();
                 }
             }
-        });
+        };
+
+        submitRequest(Request.PREVIEW, aeCallback);
     }
 
     private void resetFlashRequest() {
@@ -687,9 +695,9 @@ public class Camera2Manager implements CameraManagerInterface {
 
         mConverged = false;
         setBuilderCache(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL);
-        setBuilderCache(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
         setBuilderCache(CaptureRequest.CONTROL_AE_LOCK, Boolean.FALSE);
         submitRequest(Request.PREVIEW, null);
+
         CameraLog.d(TAG, "resetFlashRequest X");
     }
 
@@ -710,7 +718,7 @@ public class Camera2Manager implements CameraManagerInterface {
             Map.Entry entry = (Map.Entry) iterator.next();
             BuilderCache cache = (BuilderCache) entry.getValue();
 
-            CameraLog.d(TAG,
+            CameraLog.v(TAG,
                         "addCacheToBuilder, key: " + entry.getKey() + ", value: " + ((BuilderCache) entry.getValue()).getValue()
                                                                                                                      .toString());
             cache.addBuilder(captureBuilder);
